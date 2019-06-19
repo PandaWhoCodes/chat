@@ -1,121 +1,98 @@
+
 # Simple chat
+Creating a chat for the practice of new tools / languages ​​/ technologies.
 
-Создание чата в целях практики новых инструментов/языков/технологий.
+## Architecture
+The architecture of any project is described in 4 sections:
 
-## Архитектура 
+## Domain model
+### Chat
+The chat contains all the messages (sorted by time) sent to it. The main function of the chat (and the entire application at the moment) is the ability to take in a message, and see all the chat participants about this event by displaying the message.
 
-Архитектуру любого проекта описываем в 4 секциях:
+### User
 
-### Доменная модель
+ - This user has only a name. 
+ - In future: Different meta info (ava, age,
+   gender, faith, etc.) 
+  - access policy chat role (admin, moder, silent)
 
-#### Чат
-Чат содержит в себе все сообщения(в отсортированном по времени виде), отправленные в него.
-Основная функция чата(и всего приложения на данный момент) возможность принять в себя сообщение, и увидомить всех участников чата об этом событии путем показа сообщения.
+### Message
+The message has its own text, the date of sending and a link to the user who sent it. In future:
 
-#### Пользователь
-Пользователь на данный имеет только имя.
-В будущем:
- - Разная мета инфа(ава, возраст, пол, вера и т.д)
- - acces policy
- - роль в чате(админ, модер, молчун)
+ - may be edited 
+ - can be removed 
+ - can be forwarded 
+ - reply to the message may be received
 
-#### Сообщение
-Сообщение  имеет свой текст, дату отправки и ссылку на пользователя, отправившего его.
-В будущем:
- - может быть отредактировано
- - может быть удалено
- - может быть переслано
- - может быть получен ответ на сообщение(reply)
+## Components
+### Server API
+A set of endpoints to interact with the main system. The usual api, which provides clients with access to the functionality of the application
 
-### Компоненты
+### Comet server (messenger)
+Must be able to push messages into the channels, without a user request, for real time left
 
-#### Серверное API
+### Clients to api
+Any software capable of tugging server API methods. You also need to subscribe to channels for delivering realTime messages.
 
-Набор endpoints для взаимодействия с основной системой. Обычное api, которое предоставляет клиентам доступ к функционалу приложения
+### Chat cursor
+It is necessary to store the id of the last message read for each of the chats where there is a user in order to share the read and unreadable messages in the interface
 
-#### Комет сервер(доставщик сообщений)
-Должен уметь пушить сообщения в каналы, без запроса пользователя, для real time оставки
+### Persistent Storage
+Database for permanent storage of chats, messages and users. Needed for prosotra history and potentially, search. The main problem (regardless of the selected database) is to provide a convenient scaling mechanism (coordinator of sharding), with a potentially huge number of users, chats and messages.
 
-#### Клиенты к api
+### Cache
+The cache will be needed at least to store the user's chat list, and the last message for each of the chats (to get the left column in the format as VC or telegram) You can also store a cursor in the cache
 
-Любое ПО способное дергать методы  серверного API.
-Также нужно подписываться на каналы для доставки realTime сообщений
+## Component Interaction
+### Client <=> Server
+* Get chat list for user
+* Get a certain number of messages from the chat, starting with a certain
+* send a message
+* Read all messages from chat to a specific
+* I will not particularly bother with the API format, that is, I don’t set goals to achieve RestFull or the canonical compatibility of a specific jRpc version.
 
-#### Курсор в чате
-Нужно хранить id последнего прочитанного сообщения для каждого из чатов, где есть пользователь, для того чтобы делить в интерфейсе прочитанные и непрочиатнные сообщения
+### Customer <=> Comet
+Here you just need to subscribe to certain channels. There will be a channel for each of the chats.
 
-#### Персистентное хранилище
-БД для постоянного хранения чатов, сообщений и пользователей.
-Нужна для просотра истории и потенциально, поиска.
-Основная проблема(независиом от выбранной бд) предусмотреть удобный механизм масштабирования(координатор шардинга), при потенциально огромном количестве юеров, чатов и сообщений.
+## Specific Technologies
+* persistenceDB - Mysql Here I will simply use what I know.
+* messageDelivery - Centrifugo? firebase? With firebase there was an experience and centrifugo has long wanted to try + many positive reviews in terms of perfomance and high availibility
+* server language - golang Just for a long time I wanted to try it with some kind of project with an existing TK, and not with exercises in interactive tutorials
+* inMemoryDb - Redis Ideal for storing the chat list with the latest message (id and text)
+* client - vue From the front, everything is sad for me, I heard that vue is pretty simple, and I will test it.
+## Roadmap
+This repo is very crude and curved. Many improvements are needed:
 
-#### Кэш 
-Кэш будет нужен как минимум для хранения списка чатов пользователя, и последнего сообщения для каждого из чатов(чтобы получить левую колонку в формате как вк или телеграм)
-Также в кэше можно будет хранить курсор
+### Server part:
 
-### Взаимодействие компонентов
+* Normal JWT and Authorization
+* Googling good practices config applications Golang (ENV ??)
+* Think about when to close connections to the database (after each request, or in the phase of completion of processing the http request)
+* Scan to 1 command (docker compose? Cubernetes?)
+* check everywhere that all errors are correctly processed, to think about how to replace err! = nil
+* security audit
+* write tests
+* db resolver (shards chats and users)
+* screw fashion collection logs (kibana)
 
-#### Клиент <=> Сервер
-- Получить список чатов для юзера
-- Получить определенное число сообщений из чата, начиная с определенного
-- Отправить сообщение
-- Прочитать все сообщения из чата  до определенного
+### Client part:
 
-Над форматом API особо заморачиватсья не буду, т.е цели достигнуть RestFull или каноничного соовтетствия определенной версии jRpc не ставлю.
+* deal with normal asynchronous zaprosoami api for calling commands with async = false is sad
+* to refuse jkveri (yuza as a matter of fact only for Ajax)
+* do not load old messages 10 times in case they run out
+it is normal to detect the read, now the read messages are those that were in the open chat, and you need to do those that came to the user's attention
+* mark unread in the chat window (now it’s just the opposite of the chat name)
+* make sure vue protects against xss
+* author's name
+* draw the sent message before it goes to the server, and handle success / error
+* align date in the right column
 
-#### Клиент <=> Comet
-Тут нужна просто возомжность подписываться на определенные каналы. Будет свой канал для каждого из чатов.
+## How to deploy
+* Copy the repo 
+* Restoring DB from chat.sql
+* Run centrifugo on the server
+* We configure nginx on the web folder ()
+* Rename example-conf.json to conf.json and fill it in correctly
+* go run main.go
+* If you need to change hardcodes in js code
 
-### Конкретные технологии
-
- - persistenceDB - Mysql
- Здесь просто буду юзать то что знаю
- - messageDelivery - Centrifugo? firebase?
- С firebase был опыт а centrifugo давно хотел попробовать + много положительных отзывов в плане perfomance и high availibility
-  - server language - golang
- Просто давно хотел попробовать его с каким то проектом с существующим ТЗ, а не с упражнениями в интерактивных обучалках
- - inMemoryDb - Redis
- Идеально подойдет для задачи хранения списка чатов с последним сообщением(id и текск)
- - client - vue
- C фронтом у меня все печально, слышал что vue довольно простой, его и опробую.
- 
- ## RoadMap
- 
- Пороект ОЧЕНЬ сырой и кривой. Нужно много улучшений:
- 
- - Серверная часть:
-    - Нормальный JWT и авторизация
-    - Погуглить хорошие практики конфига приложений Golang(ENV ??)
-    - Подумать когда закрывать коннекшны к бд(посе каждого запроса, или в фазе завершения обработки http запроса)
-    - Развертка в 1 команду(docker compose? cubernetes?)
-    - проверить везде, что все ошибки корректно обрабатываеются, подумать чем заменить err != nil
-    - аудит безопасности
-    - написать тесты
-    - дб резолвер(шарды чатов и юзеров)
-    - прикрутить модный сбор логов(кибана)
- 
-  - Клиентская часть:
-    - разобраться с нормальными асинхронными запрсоами к api ибо вызывать команды с async = false это печаль
-    - отказаться от джквери(юза по сути только для аякса)
-    - не подгружать старые сообщения 10 раз в случае когда они кончились
-    - нормально детектить прочитанные, сейчас прочианными сообщениями считаются те, которые были в откытом чате, а нужно делать те, которые попали в поле зрения пользователя
-    - помечать непрочитанные в окне чата(сейчас помечается только напротив названия чата)
-    - удостовериться что vue защищает от xss
-    - имя автора
-    - прорисовывать отправленное сообщение до того как оно ушло на сервер, и обрабатывать успех/ошибку
-    - выровнять дату в правой колонке
-    
-    
-## Как развернуть
-1. Копируем репу к себе
-2. Восстанавливаем БД из chat.sql
-3. Запускаем centrifugo на сервере
-4. Настраиваем nginx на папку web()
-5. Переименовываем example-conf.json в conf.json и корректно заполняем
-6. `go run main.go`
-7. Если нужно меняем захардкоженные параметры в js code
-
-Надеюсь я успею подготовить compose файл и все это делать не придется... 
-
-
-      
